@@ -34,7 +34,11 @@ namespace ContosoUniversity.Controllers
             }
 
             var student = await _context.Students
+                .Include(s => s.Enrollments)
+                .ThenInclude(e => e.Course)
+                .AsNoTracking()
                 .SingleOrDefaultAsync(m => m.ID == id);
+
             if (student == null)
             {
                 return NotFound();
@@ -54,16 +58,28 @@ namespace ContosoUniversity.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("ID,LastName,FirstMidName,EnrollmentDate")] Student student)
+        public async Task<IActionResult> Create(
+            [Bind("EnrollmentDate,FirstMidName,LastName")] Student student)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _context.Add(student);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                if (ModelState.IsValid)
+                {
+                    _context.Add(student);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+            catch (DbUpdateException /* ex */)
+            {
+                //Log the error (uncomment ex variable name and write a log.
+                ModelState.AddModelError("", "Unable to save changes. " +
+                    "Try again, and if the problem persists " +
+                    "see your system administrator.");
             }
             return View(student);
         }
+    }
 
         // GET: Students/Edit/5
         public async Task<IActionResult> Edit(int? id)
